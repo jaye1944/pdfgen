@@ -2,3 +2,6 @@ image_resources/*
 *.pdf
 *.log
 .tokens
+.coverage
+__pycache__/
+tests/__pycache__/
