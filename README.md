@@ -35,7 +35,7 @@ gen_pdf/
 ### 1. Navigate to Project Directory
 
 ```bash
-cd /Users/ajaneedissanayake/Documents/chandima/python_run/gen_pdf
+cd /Users/<user>/Documents/<user>/python_run/gen_pdf
 ```
 
 ### 2. Create Virtual Environment (Recommended)
@@ -356,4 +356,4 @@ This project is part of the pdfgen repository.
 
 ## Author
 
-Chandima PDF Generator Project
+USER PDF Generator Project
