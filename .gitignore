@@ -5,3 +5,5 @@ image_resources/*
 .coverage
 __pycache__/
 tests/__pycache__/
+.DS_Store
+tests/.DS_Store

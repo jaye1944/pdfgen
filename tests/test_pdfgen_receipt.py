@@ -114,3 +114,154 @@ def test_write_custom_log_writes_file(tmp_path, monkeypatch):
     monkeypatch.setattr(pr, "log_file_name", str(f))
     pr.write_custom_log("hello world")
     assert f.read_text().strip() == "hello world"
+
+
+def test_main_creates_pdf_with_canvas(tmp_path, monkeypatch):
+    """Test main() function creates PDF with canvas operations."""
+    # Setup: create 4 dummy JPG images
+    img_dir = tmp_path / "image_resources"
+    img_dir.mkdir()
+    for i in range(4):
+        (img_dir / f"img{i}.jpg").write_text("x")
+
+    # Setup: mock canvas.Canvas to track calls
+    canvas_calls = []
+
+    class MockCanvas:
+        def __init__(self, filename, pagesize):
+            self.filename = filename
+            self.pagesize = pagesize
+            canvas_calls.append(("Canvas.__init__", filename, pagesize))
+
+        def showPage(self):
+            canvas_calls.append(("showPage",))
+
+        def save(self):
+            canvas_calls.append(("save",))
+
+        def line(self, x1, y1, x2, y2):
+            canvas_calls.append(("line", x1, y1, x2, y2))
+
+        def drawImage(self, path, x, y, width, height):
+            canvas_calls.append(("drawImage", path))
+
+        def setLineWidth(self, w):
+            pass
+
+        def setStrokeColor(self, c):
+            pass
+
+        def rect(self, x, y, w, h):
+            pass
+
+    # Patch canvas.Canvas
+    monkeypatch.setattr(pr.canvas, "Canvas", MockCanvas)
+    # Patch get_jpg_files to return our test images
+    monkeypatch.setattr(
+        pr,
+        "get_jpg_files",
+        lambda d: [f"img{i}.jpg" for i in range(4)],
+    )
+    # Patch current directory to use temp directory
+    monkeypatch.chdir(tmp_path)
+
+    # Execute: call main()
+    pr.main()
+
+    # Verify: Canvas was created, pages added, and saved
+    assert any("Canvas.__init__" in str(c) for c in canvas_calls)
+    assert any("showPage" in str(c) for c in canvas_calls)
+    assert any("save" in str(c) for c in canvas_calls)
+    assert canvas_calls.count(("showPage",)) == 1, "showPage should be called once"
+
+
+def test_main_calls_create_page_twice(tmp_path, monkeypatch):
+    """Test main() function calls create_page() twice for two pages."""
+    # Setup: create 4 dummy JPG images
+    img_dir = tmp_path / "image_resources"
+    img_dir.mkdir()
+    for i in range(4):
+        (img_dir / f"img{i}.jpg").write_text("x")
+
+    # Track create_page calls
+    create_page_calls = []
+
+    def fake_create_page(c, img1, img2):
+        create_page_calls.append((img1, img2))
+
+    class MockCanvas:
+        def __init__(self, filename, pagesize):
+            pass
+
+        def showPage(self):
+            pass
+
+        def save(self):
+            pass
+
+    # Mock create_page
+    monkeypatch.setattr(pr, "create_page", fake_create_page)
+    # Mock canvas.Canvas
+    monkeypatch.setattr(pr.canvas, "Canvas", MockCanvas)
+    # Patch get_jpg_files
+    monkeypatch.setattr(
+        pr,
+        "get_jpg_files",
+        lambda d: ["img0.jpg", "img1.jpg", "img2.jpg", "img3.jpg"],
+    )
+    # Patch current directory
+    monkeypatch.chdir(tmp_path)
+
+    # Execute
+    pr.main()
+
+    # Verify: create_page called twice with correct images
+    assert len(create_page_calls) == 2
+    # First call: images 0 and 1
+    assert "img0.jpg" in create_page_calls[0][0]
+    assert "img1.jpg" in create_page_calls[0][1]
+    # Second call: images 2 and 3
+    assert "img2.jpg" in create_page_calls[1][0]
+    assert "img3.jpg" in create_page_calls[1][1]
+
+
+def test_main_logging_info_calls(tmp_path, monkeypatch, caplog):
+    """Test main() function logs appropriate info messages."""
+    import logging
+
+    # Setup
+    img_dir = tmp_path / "image_resources"
+    img_dir.mkdir()
+    for i in range(4):
+        (img_dir / f"img{i}.jpg").write_text("x")
+
+    class MockCanvas:
+        def __init__(self, filename, pagesize):
+            pass
+
+        def showPage(self):
+            pass
+
+        def save(self):
+            pass
+
+    # Mock the expensive operations
+    monkeypatch.setattr(pr, "create_page", lambda c, i1, i2: None)
+    monkeypatch.setattr(pr.canvas, "Canvas", MockCanvas)
+    monkeypatch.setattr(
+        pr,
+        "get_jpg_files",
+        lambda d: ["img0.jpg", "img1.jpg", "img2.jpg", "img3.jpg"],
+    )
+    monkeypatch.chdir(tmp_path)
+
+    # Execute with captured logs
+    with caplog.at_level(logging.INFO):
+        pr.main()
+
+    # Verify: Check that expected log messages were written
+    log_text = caplog.text
+    assert "Dir name" in log_text or "image_resources" in log_text
+    assert "PDF file name" in log_text or "2026_q_receipt.pdf" in log_text
+    assert "creating page 1" in log_text or "creating page 2" in log_text or "new page added" in log_text
+
