@@ -8,7 +8,7 @@ import pdfgen_receipt as pr
 
 
 def test_get_jpg_files_missing_dir():
-    with pytest.raises(SystemExit):
+    with pytest.raises(pr.ImageNotFoundError):
         pr.get_jpg_files("nonexistent_dir_for_tests")
 
 
@@ -19,7 +19,7 @@ def test_get_jpg_files_wrong_count(tmp_path):
     for i in range(3):
         (d / f"img{i}.jpg").write_text("x")
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(pr.ImageNotFoundError):
         pr.get_jpg_files(str(d))
 
 
