@@ -148,8 +148,9 @@ def main():
     logging.info(f"'{pdf_file}' created")
 
 
-# Run the main function
-if __name__ == "__main__":
+# Entry point function to make testing possible
+def run_pdf_generator():
+    """Main entry point that can be tested."""
     write_custom_log(f"============================================================= Starting {log_file_name} "
                      f"=============================================================")
     main()
@@ -157,3 +158,8 @@ if __name__ == "__main__":
                      f"=============================================================")
     print("File generated successfuly.. press ENTER to exit")
     k = input()
+
+
+# Run the main function
+if __name__ == "__main__":
+    run_pdf_generator()

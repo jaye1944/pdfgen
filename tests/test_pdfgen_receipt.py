@@ -1,6 +1,8 @@
 import os
 import types
 import pytest
+import subprocess
+import sys
 
 import pdfgen_receipt as pr
 
@@ -264,4 +266,46 @@ def test_main_logging_info_calls(tmp_path, monkeypatch, caplog):
     assert "Dir name" in log_text or "image_resources" in log_text
     assert "PDF file name" in log_text or "2026_q_receipt.pdf" in log_text
     assert "creating page 1" in log_text or "creating page 2" in log_text or "new page added" in log_text
+
+
+def test_script_entry_point(tmp_path, monkeypatch):
+    """Test the run_pdf_generator() entry point function."""
+    import logging
+
+    # Setup: create 4 dummy JPG images
+    img_dir = tmp_path / "image_resources"
+    img_dir.mkdir()
+    for i in range(4):
+        (img_dir / f"img{i}.jpg").write_text("x")
+
+    # Mock input() to prevent blocking
+    monkeypatch.setattr("builtins.input", lambda: "")
+
+    # Mock write_custom_log
+    log_writes = []
+
+    def fake_write_custom_log(msg):
+        log_writes.append(msg)
+
+    monkeypatch.setattr(pr, "write_custom_log", fake_write_custom_log)
+
+    # Mock main() to verify it's called
+    main_called = []
+
+    def fake_main():
+        main_called.append(True)
+
+    monkeypatch.setattr(pr, "main", fake_main)
+
+    # Change to temp directory
+    monkeypatch.chdir(tmp_path)
+
+    # Call the entry point function
+    pr.run_pdf_generator()
+
+    # Verify: entry point function executed
+    assert len(main_called) == 1, "main() should be called once"
+    assert len(log_writes) == 2, "write_custom_log should be called twice (start and end)"
+    assert "Starting" in log_writes[0]
+    assert "Completed" in log_writes[1]
 
